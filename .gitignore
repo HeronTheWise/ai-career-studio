@@ -1,0 +1,12 @@
+node_modules
+.next
+.env
+.env.local
+.env.production
+coverage
+*.log
+
+.env.*
+!.env.example
+.vercel/
+*.tsbuildinfo

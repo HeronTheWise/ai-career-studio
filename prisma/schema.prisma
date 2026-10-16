@@ -1,0 +1,92 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+enum DocumentType { RESUME COVER_LETTER LINKEDIN_PROFILE RECRUITER_EMAIL INTERVIEW_PLAN }
+enum OrderStatus { PENDING PAID PROCESSING FULFILLED FAILED REFUNDED }
+enum JobStatus { QUEUED RUNNING SUCCEEDED FAILED }
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  displayName String?
+  locale String @default("en")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile CareerProfile?
+  documents CareerDocument[]
+  orders Order[]
+}
+model CareerProfile {
+  id String @id @default(cuid())
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model CareerDocument {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type DocumentType
+  title String
+  locale String @default("en-US")
+  templateKey String @default("modern")
+  content Json
+  version Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  exports DocumentExport[]
+  @@index([userId, updatedAt])
+}
+model DocumentExport {
+  id String @id @default(cuid())
+  documentId String
+  document CareerDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  format String
+  storageKey String
+  checksum String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime?
+  @@index([documentId, createdAt])
+}
+model Order {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  sku String
+  amount Int
+  currency String
+  status OrderStatus @default(PENDING)
+  paymentProvider String?
+  providerPaymentId String? @unique
+  idempotencyKey String @unique
+  createdAt DateTime @default(now())
+  paidAt DateTime?
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+model GenerationJob {
+  id String @id @default(cuid())
+  userId String
+  documentId String?
+  status JobStatus @default(QUEUED)
+  jobType String
+  input Json
+  output Json?
+  errorCode String?
+  attempts Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+}
+model AuditEvent {
+  id String @id @default(cuid())
+  actorId String?
+  action String
+  targetType String
+  targetId String?
+  metadata Json?
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}
